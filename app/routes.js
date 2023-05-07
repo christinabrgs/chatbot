@@ -17,7 +17,7 @@ module.exports = function (app, passport, db) {
   const { Configuration, OpenAIApi } = require("openai");
 
   const configuration = new Configuration({
-    apiKey: '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'
+    apiKey: 'placeholder'
   });
   const openai = new OpenAIApi(configuration);
 
@@ -37,15 +37,25 @@ module.exports = function (app, passport, db) {
 
   // PROFILE SECTION =========================
   app.get('/profile', isLoggedIn, async (req, res) => {
-    savedNotes.find().toArray((err, result) => {
-      if (err) return console.log(err)
-      res.render('profile.ejs', {
-        notes: result,
+    if (req.query.showlast) {
+      // savedNotes.find({ userId: req.user._id }).toArray((err, result) => {
+      savedNotes.find().toArray((err, result) => {
+        if (err) return console.log(err)
+        res.render('profile.ejs', {
+          last: result[result.length - 1],
+          notes: result
+        })
       })
-    })
-
-  });
-
+    } else {
+      savedNotes.find().toArray((err, result) => {
+        if (err) return console.log(err)
+        res.render('profile.ejs', {
+          last: '',
+          notes: result
+        })
+      })
+    };
+  })
   // LOGOUT ==============================
   app.get('/logout', function (req, res) {
     req.logout(() => {
@@ -73,13 +83,20 @@ module.exports = function (app, passport, db) {
       frequency_penalty: 0.0,
       presence_penalty: 0.0,
     })
-    const parsableJSONresponse = response.data.choices[0].text;
+    const parsableJSONresponse = response.data.choices[0].text.replace();
     const parsedResponse = JSON.stringify(parsableJSONresponse);
+    // Use regular expression to match escaped new line characters
+    let regex = /[\\n\"]/g;
+    let regex2 = /^\./g
+    // Replace all matches with an empty string
+    let formattedResponse = parsedResponse.replace(regex, "")
+    formattedResponse = formattedResponse.replace(regex2, "")
 
-    savedNotes.insertOne({ original: question, simplified: parsedResponse, saved: false }, (err, result) => {
+    console.log(parsableJSONresponse)
+    savedNotes.insertOne({ original: question, simplified: formattedResponse, saved: false, userId: req.user._id }, (err, result) => {
       console.log(result)
       if (err) return res.send(err)
-      res.redirect('/profile')
+      res.redirect('/profile?showlast=true')
     })
 
 
@@ -90,7 +107,7 @@ module.exports = function (app, passport, db) {
 
   app.put('/saved', (req, res) => {
     savedNotes
-      .findOneAndUpdate({ simplified: req.body.simplified }, {
+      .findOneAndUpdate({ simplified: req.body.simplified, user: req.user._id }, {
         $set: {
           saved: req.body.saved
         }
@@ -106,7 +123,7 @@ module.exports = function (app, passport, db) {
 
 
   app.delete('/delete', (req, res) => {
-    savedNotes.findOneAndDelete({ simplified: req.body.simplified}, (err, result) => {
+    savedNotes.findOneAndDelete({ simplified: req.body.simplified }, (err, result) => {
       if (err) return res.send(500, err)
       res.send('Message deleted!')
     })

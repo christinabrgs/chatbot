@@ -9,7 +9,10 @@ This is a full-stack application built using Node.js, ChatGPT API, and MongoDB o
 
 3. Access the application by running 'node server.js' opening your web browser and navigating to `http://localhost:8081`.
 
-4. input a definition to get a simplified definition
+
+4. Make sure you replace the 'placeholder' at 'apiKey' with chatGPT's OpenAI API Key
+
+5. input a definition to get a simplified definition
 
 
 
